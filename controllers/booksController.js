@@ -17,7 +17,6 @@ const postBook = asyncHandler(async (req, res) => {
     const book = await Book.create(req.body);
     res.status(200).json(book);
   } catch (error) {
-    console.log("There is an error in postBook");
     res.status(500);
     throw new Error(error.message);
   }

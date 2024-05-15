@@ -5,6 +5,7 @@ const bookSchema = mongoose.Schema(
     name: {
       type: String,
       required: [true, "Name is required"],
+      unique: true,
     },
     quantity: {
       type: Number,

@@ -2,14 +2,14 @@ require("dotenv").config();
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
-const bookRoute = require("./routes/bookRoute");
+const indexRoutes = require("./routes/index");
 const PORT = process.env.PORT || 3000;
 const errorMiddleware = require("./middleware/errorMiddleware");
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-app.use("/api/books", bookRoute);
+app.use("/api", indexRoutes);
 
 app.get("/", (req, res) => {
   res.send("Hello NODE API");
