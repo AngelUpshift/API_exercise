@@ -5,11 +5,15 @@ const {
   postUser,
   updateUser,
   deleteUser,
+  loginUser,
 } = require("../controllers/usersController");
+const { validateToken } = require("../JWT");
 
-router.get("/", getUsers);
+router.get("/", validateToken, getUsers);
 
-router.post("/", postUser);
+router.post("/register", postUser);
+
+router.post("/login", loginUser);
 
 router.put("/:id", updateUser);
 
