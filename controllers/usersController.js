@@ -1,6 +1,8 @@
 const { createToken } = require("../JWT");
 const User = require("../models/usersModel");
 const bcrypt = require("bcrypt");
+const crypto = require("crypto");
+const sendEmail = require("../utils/email");
 
 const getUsers = async (req, res) => {
   try {
@@ -81,10 +83,79 @@ const loginUser = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+  //1. get user based on posted email
+  const { email } = req.body;
+  const user = await User.findOne({ email: { $eq: email } });
+
+  if (!user) {
+    return res.status(404).json({ message: "Cannot find the email adress" });
+  }
+
+  //2. generate a random reset token
+  const resetToken = user.createPasswordResetToken();
+  await user.save({ validateBeforeSave: false });
+
+  //3. send the token back to the user email
+  const resetUrl = `${req.protocol}://${req.get(
+    "host"
+  )}/api/users/resetPassword/${resetToken}`;
+  // req.protocol e zamena za http ili https
+  // req.get('host') e zamena za localhost
+  const message = `We have received a password reset request. Please use the link below to reset your password\n\n${resetUrl}`;
+
+  try {
+    sendEmail({
+      email: user.email,
+      subject: "Password reseting",
+      message: message,
+    });
+    res.status(200).json({ message: "Email sent!" });
+  } catch (error) {
+    user.passwordResetToken = undefined;
+    user.passwordResetTokenExpires = undefined;
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  const token = crypto
+    .createHash("sha256")
+    .update(req.params.token)
+    .digest("hex");
+  const user = await User.findOne({
+    passwordResetToken: token,
+    passwordResetTokenExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+    return res.status(400).json({ message: "Token expired or not found!" });
+  }
+
+  user.password = req.body.password;
+  user.confirmPassword = req.body.confirmPassword;
+  user.passwordResetToken = undefined;
+  user.passwordResetTokenExpires = undefined;
+  user.passwordChangedAt = Date.now();
+
+  await user.save();
+
+  const loginToken = createToken(user);
+
+  res.cookie("access-token-cookie", loginToken, {
+    maxAge: 2000000,
+    httpOnly: true,
+  });
+
+  res.status(200).json({ message: "LOGGED IN" });
+};
+
 module.exports = {
   getUsers,
   postUser,
   updateUser,
   deleteUser,
   loginUser,
+  forgotPassword,
+  resetPassword,
 };
